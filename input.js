@@ -20,6 +20,7 @@
       this.keys = new Set();
       this.pointers = new Map();
       this.taps = new Set();
+      this.tapTokens = new Map();
     }
 
     static actionForKey(code) {
@@ -54,10 +55,15 @@
       if (this.pointers.delete(pointerId)) this.changed();
     }
 
+    /* Holds an action briefly. A later tap of the same action restarts its time rather than sharing it. */
     tap(action) {
+      const token = {};
+      this.tapTokens.set(action, token);
       this.taps.add(action);
       this.changed();
       this.schedule(() => {
+        if (this.tapTokens.get(action) !== token) return;
+        this.tapTokens.delete(action);
         if (this.taps.delete(action)) this.changed();
       }, TAP_MILLISECONDS);
     }
@@ -66,6 +72,7 @@
       this.keys.clear();
       this.pointers.clear();
       this.taps.clear();
+      this.tapTokens.clear();
       this.changed();
     }
 

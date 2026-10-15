@@ -499,4 +499,56 @@ test('the loop stops drawing once play stops and restarts when play resumes', ()
   assert.ok(ui.game.seconds > seconds && ui.game.seconds < seconds + 0.02);
 });
 
+test('without storage, best scores last the session and a lower score is not a new best', () => {
+  const ui = loadInterface({ storageDisabled: true });
+  ui.start();
+  ui.game.score = 500;
+  ui.game.state = 'over';
+  ui.game.onEvent({ type: 'over', score: 500 });
+  assert.equal(ui.element('message-text').textContent, 'score 500: a new best.');
+  ui.advanceTimers(700);
+  ui.start();
+  ui.game.score = 100;
+  ui.game.state = 'over';
+  ui.game.onEvent({ type: 'over', score: 100 });
+  assert.equal(ui.element('message-text').textContent, 'score 100 · best 500');
+  assert.equal(ui.element('best').textContent, '500');
+});
+
+test('Escape closes settings from inside a settings control, and resuming closes them too', () => {
+  const ui = loadInterface();
+  ui.start();
+  ui.element('settings-button').dispatch('click');
+  ui.key('keydown', 'Escape', { target: ui.element('pace') });
+  assert.equal(ui.element('settings').hidden, true);
+  assert.equal(ui.game.state, 'paused');
+  ui.element('settings-button').dispatch('click');
+  assert.equal(ui.element('settings').hidden, false);
+  ui.element('play').dispatch('click');
+  assert.equal(ui.game.state, 'playing');
+  assert.equal(ui.element('settings').hidden, true);
+});
+
+test('pausing from the pause button hands focus to the resume button', () => {
+  const ui = loadInterface();
+  ui.start();
+  ui.document.activeElement = ui.element('pause');
+  ui.element('pause').dispatch('click');
+  assert.equal(ui.game.state, 'paused');
+  assert.equal(ui.focused, 'play');
+});
+
+test('a repeated keyboard tap on a control holds for its own full time', () => {
+  const ui = loadInterface();
+  ui.start();
+  const turn = ui.button('clockwise');
+  turn.dispatch('click', { detail: 0 });
+  ui.advanceTimers(100);
+  turn.dispatch('click', { detail: 0 });
+  ui.advanceTimers(60);
+  assert.equal(ui.game.controls.clockwise, true);
+  ui.advanceTimers(90);
+  assert.equal(ui.game.controls.clockwise, undefined);
+});
+
 // These tests exercise event wiring and drawing calls in a Node VM. They do not verify browser rendering.

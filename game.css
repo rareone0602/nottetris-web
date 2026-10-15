@@ -15,7 +15,7 @@ html:has(.game.is-playing) { overscroll-behavior: none; }
 /* The game: every line of text inside it sits on a rule. */
 .game { margin-top: var(--L); max-width: 42em; container-type: inline-size; }
 .game :is(p, dl, dd) { margin: 0; }
-.game :is(p, dt, dd) { line-height: var(--L); position: relative; top: var(--sit); }
+.game :is(p, dt, dd):not(.announcer) { line-height: var(--L); position: relative; top: var(--sit); }
 .game .small, .game dt, .next-piece p, .settings label:not(.check), .message-text { font-size: 15px; color: var(--ink-2); }
 .game a { color: var(--ink-2); }
 .game .btn { line-height: var(--L); }

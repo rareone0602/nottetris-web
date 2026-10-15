@@ -39,12 +39,17 @@
   let bestBefore = 0;
   let actionsLocked = false;
 
+  /* Settings and best scores are kept in browser storage. When storage is disabled, they last until the page
+     closes. */
+  const unsaved = new Map();
+
   function readSetting(key, fallback) {
     try { return localStorage.getItem('not-tetris.' + key) ?? fallback; }
-    catch (_) { return fallback; }
+    catch (_) { return unsaved.get(key) ?? fallback; }
   }
 
   function saveSetting(key, value) {
+    unsaved.set(key, String(value));
     try { localStorage.setItem('not-tetris.' + key, String(value)); }
     catch (_) { /* Play remains available when browser storage is disabled. */ }
   }
@@ -128,7 +133,6 @@
     updateInterface();
   }
 
-  const game = new Core.Game({ onEvent: onGameEvent });
   const input = new Controls({
     onChange: actions => {
       game.controls = Object.fromEntries(Array.from(actions, action => [action, true]));
@@ -140,6 +144,7 @@
     },
     schedule: (callback, delay) => setTimeout(callback, delay)
   });
+  const game = new Core.Game({ onEvent: onGameEvent });
 
   function bestKey() { return 'best.' + game.pace; }
 
@@ -224,13 +229,18 @@
     focusBoard();
   }
 
-  /* The primary action: play, pause, resume or play again, depending on the state. */
+  /* The primary action: play, pause, resume or play again, depending on the state. Pausing from the pause
+     button, which then hides, moves focus to the resume button in its place. */
   function togglePlay() {
     if (actionsLocked) return;
     primeAudio();
     input.releaseAll();
-    if (game.state === 'playing') game.pause();
-    else if (game.state === 'paused') {
+    if (game.state === 'playing') {
+      const fromPauseButton = document.activeElement === pauseButton;
+      game.pause();
+      if (fromPauseButton) playButton.focus({ preventScroll: true });
+    } else if (game.state === 'paused') {
+      setSettingsOpen(false);
       game.resume();
       focusBoard();
     } else startGame();
@@ -308,7 +318,8 @@
   }
 
   document.addEventListener('keydown', event => {
-    if (event.ctrlKey || event.metaKey || event.altKey || isFormField(event.target)) return;
+    if (event.ctrlKey || event.metaKey || event.altKey) return;
+    if (isFormField(event.target) && !(event.code === 'Escape' && !settings.hidden)) return;
     if (event.code === 'Escape' && !settings.hidden) {
       event.preventDefault();
       setSettingsOpen(false);
@@ -402,6 +413,15 @@
     observer.observe(preview);
   }
   window.addEventListener('resize', resize);
+
+  /* Moving the window to a screen with another pixel ratio changes no CSS size, so it is watched separately. */
+  function watchPixelRatio() {
+    const query = window.matchMedia('(resolution: ' + (window.devicePixelRatio || 1) + 'dppx)');
+    if (typeof query.addEventListener === 'function') {
+      query.addEventListener('change', () => { resize(); watchPixelRatio(); }, { once: true });
+    }
+  }
+  watchPixelRatio();
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(resize);
   game.reset({ pace: pace.value });
   resize();
