@@ -22,11 +22,14 @@ game service. This is an independent repository intended to be served at
 included here; the game does not load scripts or styles from `phy_friends`.
 
 - Left/right arrows or A/D move the current piece.
-- Z/X turn it continuously. Up and W are aliases.
-- Down, S or space accelerates the fall.
-- P or Escape pauses. Leaving the tab also pauses.
-- On a phone, hold the labelled controls. Simultaneous touches are supported.
-  Release down before accelerating the next piece.
+- Z and X turn it continuously; W also turns anticlockwise and up clockwise.
+- Down, S or space accelerates the fall. Release it before accelerating the
+  next piece.
+- P or Escape pauses, and Enter starts. Leaving the tab also pauses.
+- On a touch screen, the left thumb's controls move and the right thumb's turn.
+  A held thumb can slide from one control to the next. Pause is in the board's
+  top corner. Held sideways, the two sets of controls sit either side of the
+  board.
 
 The game cuts any row with more than 81% of its area filled. Remnants
 retain their geometry and motion, and disconnected remnants become separate
@@ -40,14 +43,18 @@ game's independent random draws. Physics parameters are tuned for this port
 rather than a frame-exact emulation of the Lua/Box2D implementation. Local
 multiplayer is not included.
 
-Gentle speed, optional sound, extra block markings and local best scores are
+Gentle speed, optional sound, letters on blocks and local best scores are
 available in settings. No gameplay or input is uploaded.
 
 ## Files and checks
 
-`core.js` contains the simulation and exact polygon clipping; `game.js` owns
-canvas drawing, input, sound and storage. `game.css` adds layout on top of the
-copied notebook and pencil styles, at the house informality dial of 100.
+`core.js` contains the simulation and exact polygon clipping. `input.js` turns
+held keys and touches into actions, `render.js` draws the board and the next
+piece on canvas, and `app.js` wires them to the page: settings, sound, storage,
+the words around the board and the animation loop, which runs only during play.
+`game.css` adds layout on top of the copied notebook and pencil styles. The
+board is a whole number of rules tall, as many as the window leaves free, and
+the page scrolls it into view when play starts.
 The game and tests live at the repository root. Shantell Sans uses the house
 informality setting of 100: running text has `INFM 100` and `BNCE 0`; headings
 and other hand text have `INFM 100` and `BNCE 50`, following `STYLE.md` §5.
@@ -60,7 +67,8 @@ node --test core.test.cjs ui.test.cjs
 
 The physics tests exercise real Matter.js, including transformed cuts and
 fragment motion. UI tests use DOM and canvas stubs to check event wiring,
-simultaneous touch input, focus, pausing and storage failure. Those tests do
+simultaneous and sliding touch input, focus, pausing, the idle loop and
+storage failure. Those tests do
 not establish browser rendering or performance on a physical phone.
 
 `python3 build-preview.py` creates a single-file review copy at

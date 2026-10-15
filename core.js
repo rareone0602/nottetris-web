@@ -12,6 +12,7 @@
   const HEIGHT = CELL * ROWS;
   const THRESHOLD = 0.81;
   const STEP = 1000 / 120;
+  const CLEAR_SECONDS = 0.42;
   const SHAPES = [
     { name: 'I', color: '#7fb9be', cells: [[-1.5, 0], [-0.5, 0], [0.5, 0], [1.5, 0]] },
     { name: 'L', color: '#d5ab72', cells: [[-1, -0.5], [0, -0.5], [1, -0.5], [1, 0.5]] },
@@ -180,6 +181,13 @@
       return Composite.allBodies(this.engine.world).filter(body => body.plugin.piece);
     }
 
+    /* Returns the highest point of the settled pile, or Infinity when the board is empty. */
+    pileTop() {
+      let top = Infinity;
+      for (const body of this.pieces()) if (body !== this.active) top = Math.min(top, body.bounds.min.y);
+      return top;
+    }
+
     drawKind() {
       if (!this.bag.length) {
         this.bag = SHAPES.map((shape, kind) => kind);
@@ -227,12 +235,13 @@
       const count = rows.length;
       const average = rows.reduce((sum, row) => sum + this.densities[row], 0) / count;
       const points = Math.ceil(Math.pow(count * 3, Math.pow(Math.min(average, 1), 10)) * 20 + count * count * 40);
+      const previousLevel = this.level;
       this.score += points;
       this.lines += count;
       this.level = Math.floor(this.lines / 10);
       this.clearing = rows;
-      this.clearTimer = 0.42;
-      this.onEvent({ type: 'clear', count, points });
+      this.clearTimer = CLEAR_SECONDS;
+      this.onEvent({ type: 'clear', count, points, rows, level: this.level, levelUp: this.level > previousLevel });
       return true;
     }
 
@@ -320,5 +329,5 @@
     }
   }
 
-  return { Game, CELL, COLS, ROWS, WIDTH, HEIGHT, THRESHOLD, STEP, SHAPES, area, clip, band, polygons, connectedGroups, makePiece };
+  return { Game, CELL, COLS, ROWS, WIDTH, HEIGHT, THRESHOLD, STEP, CLEAR_SECONDS, SHAPES, area, clip, band, polygons, connectedGroups, makePiece };
 });

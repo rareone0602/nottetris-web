@@ -145,7 +145,7 @@ test('rows measure occupied area, ignore the active piece, and clear only above 
   assert.deepEqual(game.clearing, [16]);
   assert.equal(game.lines, 1);
   assert.equal(game.score, 100);
-  assert.deepEqual(events.at(-1), { type: 'clear', count: 1, points: 100 });
+  assert.deepEqual(events.at(-1), { type: 'clear', count: 1, points: 100, rows: [16], level: 0, levelUp: false });
   const active = makePiece(0, WIDTH / 2, HEIGHT - CELL * 2.5);
   game.active = active;
   Composite.add(game.engine.world, active);
@@ -157,8 +157,11 @@ test('a line clear removes the band, updates the level, and resumes spawning', (
   game.state = 'playing';
   game.lines = 9;
   addRectangle(game, WIDTH / 2, HEIGHT - CELL / 2, WIDTH, CELL);
+  const events = [];
+  game.onEvent = event => events.push(event);
   assert.equal(game.checkLines(), true);
   assert.equal(game.level, 1);
+  assert.equal(events.at(-1).levelUp, true);
   assert.equal(game.lines, 10);
   for (let i = 0; i < 100 && !game.active; i++) game.step();
   assert.ok(game.active);
