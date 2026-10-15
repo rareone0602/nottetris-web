@@ -14,9 +14,12 @@
   <link rel="stylesheet" href="site/notebook.css">
   <link rel="stylesheet" href="site/pencil.css">
   <link rel="stylesheet" href="game.css">
+  <script>if (window.matchMedia && matchMedia('(any-pointer: coarse)').matches) document.documentElement.classList.add('touch');</script>
   <script defer src="vendor/matter.min.js"></script>
   <script defer src="core.js"></script>
-  <script defer src="game.js"></script>
+  <script defer src="input.js"></script>
+  <script defer src="render.js"></script>
+  <script defer src="app.js"></script>
 </head>
 <body>
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
@@ -32,80 +35,82 @@
   <header>
     <h1>not tetris</h1>
     <p class="intro">falling blocks, with rather more physics.</p>
-    <nav aria-label="pages"><ul>
-      <li><span aria-current="page">not tetris</span></li>
-      <li><a href="https://rareone0602.github.io/phy_friends/style.html">style guide</a></li>
-    </ul></nav>
+    <p class="credit">adapted from <a href="https://stabyourself.net/nottetris2/">Not Tetris 2</a> by <a href="https://stabyourself.net/">Stabyourself</a>.</p>
   </header>
 
-  <article class="doc">
-    <p class="byline">a browser adaptation of <a href="https://stabyourself.net/nottetris2/">Not Tetris 2</a> by <a href="https://stabyourself.net/">Stabyourself</a>.</p>
-    <section class="game" aria-label="not tetris game">
-      <div class="toolbar">
-        <button id="play" class="btn" type="button">play</button>
-        <button id="restart" class="btn quiet" type="button" hidden>start again</button>
-        <button id="settings-button" class="btn quiet" type="button" aria-expanded="false" aria-controls="settings">settings</button>
-        <a class="help-link" href="#how">how to play</a>
-      </div>
-      <div id="settings" class="settings" hidden>
-        <div class="row"><label for="pace">falling speed</label><select id="pace" class="field">
-          <option value="original">original</option>
-          <option value="gentle">gentle</option>
-        </select></div>
-        <label class="check"><input id="sound" type="checkbox">sound</label>
-        <label class="check"><input id="patterns" type="checkbox">extra block patterns</label>
-        <p class="small">speed applies when you start again. scores stay on this device.</p>
-      </div>
-
-      <div class="play-layout">
-        <div class="board-wrap" id="board-wrap" tabindex="0" aria-label="game board" aria-describedby="board-help" aria-keyshortcuts="ArrowLeft ArrowRight ArrowDown ArrowUp z x p Escape">
-          <canvas id="board" width="336" height="600" role="img" aria-label="physics game board: ten columns and eighteen rows">This game needs a browser with canvas support.</canvas>
-          <div class="board-message" id="board-message">
-            <p class="hand" id="message-title">a loose arrangement</p>
-            <p id="message-text">fill a row. mind the gaps.</p>
-          </div>
+  <section class="game" id="game" aria-label="game">
+    <div class="stage">
+      <div class="panel">
+        <p class="toolbar">
+          <button id="settings-button" class="btn quiet" type="button" aria-expanded="false" aria-controls="settings">settings</button>
+          <a id="help-link" href="#how">how to play</a>
+        </p>
+        <div id="settings" class="settings" hidden>
+          <p><label for="pace">falling speed</label></p>
+          <p><select id="pace" class="field">
+            <option value="original">original</option>
+            <option value="gentle">gentle</option>
+          </select></p>
+          <p><label class="check"><input id="sound" type="checkbox">sound</label></p>
+          <p><label class="check"><input id="letters" type="checkbox">letters on blocks</label></p>
+          <p class="small">speed changes from the next game. scores stay on this device.</p>
         </div>
-        <aside class="score-notes" aria-label="game information">
+        <div class="side">
           <dl class="scores">
             <div><dt>score</dt><dd class="hand" id="score">0</dd></div>
-            <div><dt id="count-label">lines</dt><dd class="hand" id="count">0</dd></div>
+            <div><dt>lines</dt><dd class="hand" id="lines">0</dd></div>
             <div><dt>level</dt><dd class="hand" id="level">0</dd></div>
-            <div><dt>best</dt><dd class="hand" id="best">0</dd></div>
+            <div class="best"><dt id="best-label">best</dt><dd class="hand" id="best">0</dd></div>
           </dl>
-          <div class="next-piece"><p class="small">next</p><canvas id="next" width="136" height="76" role="img" aria-label="next piece"></canvas></div>
-          <p class="small pace-note" id="pace-note">clear lines · original</p>
-          <p class="note" id="score-note" aria-hidden="true"></p>
-        </aside>
+          <div class="next-piece"><p>next</p><canvas id="next" width="128" height="64" role="img" aria-label="next piece"></canvas></div>
+        </div>
       </div>
 
-      <div class="touch-controls" aria-label="touch controls">
-        <button type="button" class="btn quiet control" data-action="left" aria-label="move left">left</button>
-        <button type="button" class="btn quiet control" data-action="down" aria-label="fall faster">down</button>
-        <button type="button" class="btn quiet control" data-action="right" aria-label="move right">right</button>
-        <button type="button" class="btn quiet control turn-left" data-action="counterclockwise" aria-label="rotate anticlockwise">turn left</button>
-        <button type="button" id="touch-pause" class="btn quiet control-note">play</button>
-        <button type="button" class="btn quiet control turn-right" data-action="clockwise" aria-label="rotate clockwise">turn right</button>
+      <div class="board-wrap" id="board-wrap" tabindex="0" aria-label="game board" aria-describedby="board-help" aria-keyshortcuts="ArrowLeft ArrowRight ArrowDown ArrowUp z x p Escape Enter">
+        <canvas id="board" width="336" height="600" role="img" aria-label="physics game board: ten columns and eighteen rows">This game needs a browser with canvas support.</canvas>
+        <p class="board-pause"><button id="pause" class="btn quiet" type="button" hidden>pause</button></p>
+        <p class="board-note" id="board-note" aria-hidden="true" hidden></p>
+        <div class="board-message" id="board-message">
+          <p class="hand message-title" id="message-title">fill a row</p>
+          <p class="message-text" id="message-text">81% will do, at any angle.</p>
+          <p class="message-text" id="message-hint"></p>
+          <p class="message-actions"><button id="play" class="btn" type="button">play</button><button id="restart" class="btn quiet" type="button" hidden>start again</button></p>
+        </div>
       </div>
-      <p class="small game-status" id="game-status">hold a word to move or turn. two thumbs work.</p>
-      <p id="board-help" class="announcer">Move with the left and right arrows. Hold Z or X to turn. Hold down or space to fall faster. P or Escape pauses. Touch controls are below the board. Pieces keep moving after they land.</p>
-      <p id="announcer" class="announcer" role="status" aria-live="polite" aria-atomic="true"></p>
-      <noscript><p class="error">javascript is needed to play this game.</p></noscript>
-    </section>
 
+      <div class="touch-controls">
+        <div class="cluster move" role="group" aria-label="move">
+          <button type="button" class="btn quiet control down" data-action="down"><span>down</span></button>
+          <button type="button" class="btn quiet control" data-action="left"><span>left</span></button>
+          <button type="button" class="btn quiet control" data-action="right"><span>right</span></button>
+        </div>
+        <div class="cluster turn" role="group" aria-label="turn">
+          <button type="button" class="btn quiet control" data-action="counterclockwise"><span>turn left</span></button>
+          <button type="button" class="btn quiet control" data-action="clockwise"><span>turn right</span></button>
+        </div>
+      </div>
+    </div>
+    <p id="board-help" class="announcer">Move with the left and right arrows. Hold Z or X to turn. Hold down or space to fall faster. P or Escape pauses, and Enter starts. On a touch screen, the controls are under the board. Pieces keep moving after they land.</p>
+    <p id="announcer" class="announcer" role="status" aria-live="polite" aria-atomic="true"></p>
+    <noscript><p class="error">javascript is needed to play this game.</p></noscript>
+  </section>
+
+  <article class="doc">
     <section class="instructions" id="how" aria-labelledby="how-title">
       <h2 id="how-title">how to play</h2>
-      <p>Move the falling piece and hold a turn key to rotate it freely. The next piece arrives when yours touches the pile. Landed pieces can still tip, slide and get in the way.</p>
-      <p>Fill more than 81% of a row. The little marks beside the board show how close each row is. A full row is sliced out, even through a tilted piece; the rest falls into the gap. Ten cleared rows raise the level.</p>
+      <p>Move the falling piece, and hold a turn key to rotate it freely. It keeps sliding and turning for a moment after you let go, so short taps steer best. The next piece arrives when yours touches the pile. Landed pieces can still tip, slide and get in the way.</p>
+      <p>Fill more than 81% of a row. The marks to the right of the board show how full each row is; a tick means the row goes at the next landing. A full row is crossed out and cut away, even through a tilted piece, and whatever was above falls into the gap. Ten rows raise the level, and the pieces fall a little faster.</p>
+      <p>The dashed line near the top is the limit. A piece that lands with its middle above it ends the game, and the line darkens when the pile gets close.</p>
       <table>
         <thead><tr><th>what</th><th>keyboard</th><th>touch</th></tr></thead>
         <tbody>
-          <tr><td>move</td><td>← → or A D</td><td>left / right</td></tr>
-          <tr><td>turn</td><td>Z X or ↑</td><td>turn left / right</td></tr>
+          <tr><td>move</td><td>← → or A D</td><td>left, right</td></tr>
+          <tr><td>turn</td><td>Z X or ↑</td><td>turn left, turn right</td></tr>
           <tr><td>fall faster</td><td>↓ or space</td><td>down</td></tr>
-          <tr><td>pause</td><td>P or Esc</td><td>pause</td></tr>
+          <tr><td>pause</td><td>P or Esc</td><td>pause, on the board</td></tr>
         </tbody>
       </table>
-      <p class="small">gentle speed gives you more time. the game pauses when you leave the tab. gravity has not read the instructions.</p>
+      <p class="small">on a phone, the left thumb moves and the right thumb turns; a held thumb can slide between controls. gentle speed, in settings, gives you more time. the game pauses when you leave the tab.</p>
     </section>
 
     <section class="credits" aria-labelledby="credits-title">

@@ -55,7 +55,7 @@ function loadInterface({ storage = {}, storageDisabled = false, mobile = false, 
     const classes = new Set();
     const item = eventTarget({
       id,
-      tagName: id === 'pace' ? 'SELECT' : ['sound', 'patterns'].includes(id) ? 'INPUT' : 'DIV',
+      tagName: id === 'pace' ? 'SELECT' : ['sound', 'letters'].includes(id) ? 'INPUT' : 'DIV',
       dataset: {},
       style: {},
       hidden: id === 'settings',
@@ -63,6 +63,7 @@ function loadInterface({ storage = {}, storageDisabled = false, mobile = false, 
       disabled: false,
       value: '',
       classList: {
+        add(name) { classes.add(name); },
         toggle(name, enabled) { if (enabled) classes.add(name); else classes.delete(name); },
         contains(name) { return classes.has(name); }
       },
@@ -88,20 +89,10 @@ function loadInterface({ storage = {}, storageDisabled = false, mobile = false, 
   });
   const document = eventTarget({
     hidden: false,
+    documentElement: element('html'),
     getElementById: element,
     querySelectorAll: selector => selector === '[data-action]' ? controls : [],
     querySelector: selector => element(selector),
-  });
-  const window = eventTarget({
-    devicePixelRatio: pixelRatio,
-    matchMedia: () => ({ matches: mobile }),
-    requestAnimationFrame: callback => { frames.push(callback); },
-    NotTetris: {
-      ...Core,
-      Game: class extends Core.Game {
-        constructor(options) { super(options); games.push(this); }
-      }
-    }
   });
   const localStorage = {
     getItem(key) {
@@ -113,16 +104,28 @@ function loadInterface({ storage = {}, storageDisabled = false, mobile = false, 
       values.set(key, String(value));
     }
   };
-  const sandbox = {
-    window, document, localStorage, Matter,
+  const window = vm.createContext(eventTarget({
+    document, localStorage, Matter,
+    devicePixelRatio: pixelRatio,
+    matchMedia: query => ({ matches: mobile && !query.includes('reduced-motion') }),
+    requestAnimationFrame: callback => { frames.push(callback); },
+    NotTetris: {
+      ...Core,
+      Game: class extends Core.Game {
+        constructor(options) { super(options); games.push(this); }
+      }
+    },
     setTimeout(callback, delay = 0) {
       const id = ++timerId;
       timers.set(id, { callback, time: now + delay });
       return id;
     },
     clearTimeout(id) { timers.delete(id); }
-  };
-  vm.runInNewContext(fs.readFileSync(path.join(__dirname, 'game.js'), 'utf8'), sandbox, { filename: 'game.js' });
+  }));
+  window.window = window;
+  for (const filename of ['input.js', 'render.js', 'app.js']) {
+    vm.runInContext(fs.readFileSync(path.join(__dirname, filename), 'utf8'), window, { filename });
+  }
   return {
     game: games[0], window, document, element, controls, values, canvasCalls, scrolledElements,
     get focused() { return focused; },
@@ -159,10 +162,13 @@ test('the UI initializes a ready game, draws canvases, and starts a playable gam
   assert.ok(ui.game.active);
   assert.equal(ui.element('play').textContent, 'pause');
   assert.equal(ui.element('board-message').hidden, true);
-  assert.equal(ui.element('restart').hidden, false);
+  assert.equal(ui.element('restart').hidden, true);
+  assert.equal(ui.element('pause').hidden, false);
+  assert.equal(ui.element('game').classList.contains('is-playing'), true);
   assert.ok(ui.controls.every(button => !button.disabled));
   assert.equal(ui.focused, 'board-wrap');
   assert.equal(ui.scrolls, 1);
+  assert.equal(ui.scrolledElements.at(-1), 'board-wrap');
   ui.frame(100);
   ui.frame(116.7);
   assert.ok(ui.game.seconds > 0);
@@ -307,11 +313,11 @@ test('settings pause play and speed applies on restart while display preferences
   ui.element('pace').dispatch('change');
   assert.equal(ui.game.pace, 'original');
   assert.equal(ui.game.active, originalPiece);
-  ui.element('patterns').checked = true;
-  ui.element('patterns').dispatch('change');
+  ui.element('letters').checked = true;
+  ui.element('letters').dispatch('change');
   ui.element('sound').checked = true;
   ui.element('sound').dispatch('change');
-  assert.equal(ui.values.get('not-tetris.patterns'), 'true');
+  assert.equal(ui.values.get('not-tetris.letters'), 'true');
   assert.equal(ui.values.get('not-tetris.sound'), 'true');
   ui.element('restart').dispatch('click');
   assert.equal(ui.game.state, 'playing');
@@ -319,39 +325,44 @@ test('settings pause play and speed applies on restart while display preferences
   assert.notEqual(ui.game.active, originalPiece);
   assert.equal(ui.element('settings').hidden, true);
   assert.equal(ui.element('settings-button').getAttribute('aria-expanded'), 'false');
-  assert.equal(ui.element('pace-note').textContent, 'clear lines · gentle');
+  assert.equal(ui.element('best-label').textContent, 'best, gentle');
 });
 
 test('saved settings initialize the game and ready-state speed changes apply immediately', () => {
   const ui = loadInterface({ storage: {
     'not-tetris.pace': 'gentle',
-    'not-tetris.patterns': 'true',
+    'not-tetris.letters': 'true',
     'not-tetris.best.gentle': '1234'
   } });
   assert.equal(ui.game.pace, 'gentle');
-  assert.equal(ui.element('patterns').checked, true);
+  assert.equal(ui.element('letters').checked, true);
   assert.equal(ui.element('best').textContent, '1,234');
+  assert.equal(ui.element('best-label').textContent, 'best, gentle');
   ui.element('pace').value = 'original';
   ui.element('pace').dispatch('change');
   assert.equal(ui.game.state, 'ready');
   assert.equal(ui.game.pace, 'original');
-  assert.equal(ui.element('pace-note').textContent, 'clear lines · original');
+  assert.equal(ui.element('best-label').textContent, 'best');
+  assert.equal(ui.element('best').textContent, '0');
   assert.equal(ui.values.get('not-tetris.pace'), 'original');
 });
 
 test('blocked storage and malformed saved values leave the game playable', () => {
   const ui = loadInterface({ storageDisabled: true });
   ui.start();
-  ui.element('patterns').checked = true;
-  ui.element('patterns').dispatch('change');
+  ui.element('letters').checked = true;
+  ui.element('letters').dispatch('change');
   ui.game.score = 300;
-  ui.game.onEvent({ type: 'clear', count: 2, points: 300 });
+  ui.game.onEvent({ type: 'clear', count: 2, points: 300, rows: [16, 17], level: 0, levelUp: false });
   assert.equal(ui.game.state, 'playing');
   assert.equal(ui.element('score').textContent, '300');
   assert.equal(ui.element('best').textContent, '300');
   assert.match(ui.element('announcer').textContent, /2 rows cleared\. 300 points/);
-  ui.advanceTimers(2400);
-  assert.equal(ui.element('score-note').textContent, '');
+  assert.equal(ui.element('board-note').hidden, false);
+  assert.equal(ui.element('board-note').textContent, '+300, two rows');
+  ui.advanceTimers(1800);
+  assert.equal(ui.element('board-note').hidden, true);
+  assert.equal(ui.element('board-note').textContent, '');
   const invalid = loadInterface({ storage: {
     'not-tetris.pace': 'invalid',
     'not-tetris.best.original': 'NaN'
@@ -372,38 +383,120 @@ test('game over releases every input and presents the replay action', () => {
   assert.equal(ui.element('play').textContent, 'play again');
   assert.ok(ui.controls.every(button => button.disabled));
   assert.match(ui.element('announcer').textContent, /no room left\. score 200/);
+  assert.equal(ui.element('message-text').textContent, 'score 200: a new best.');
+  assert.equal(ui.element('play').disabled, true);
+  ui.key('keydown', 'Enter');
+  ui.element('play').dispatch('click');
+  assert.equal(ui.game.state, 'over');
+  ui.advanceTimers(700);
+  assert.equal(ui.element('play').disabled, false);
   ui.key('keydown', 'Enter');
   assert.equal(ui.game.state, 'playing');
   assert.equal(ui.game.score, 0);
 });
 
-test('the mobile pause button starts, pauses, resumes and replays beside the touch controls', () => {
+test('Enter on a focused link or button keeps its own meaning', () => {
+  const ui = loadInterface();
+  const link = ui.key('keydown', 'Enter', { target: { tagName: 'A' } });
+  const button = ui.key('keydown', 'Enter', { target: { tagName: 'BUTTON' } });
+  assert.equal(link.defaultPrevented, false);
+  assert.equal(button.defaultPrevented, false);
+  assert.equal(ui.game.state, 'ready');
+});
+
+test('a held touch can slide from one control zone to another without lifting', () => {
   const ui = loadInterface({ mobile: true });
-  const pause = ui.element('touch-pause');
-  assert.equal(pause.textContent, 'play');
-  pause.dispatch('click');
+  ui.start();
+  const nothing = { closest: () => null };
+  ui.document.elementFromPoint = x => (x < 50 ? ui.button('left') : x < 100 ? ui.button('right') : nothing);
+  ui.button('left').closest = function () { return this; };
+  ui.button('right').closest = function () { return this; };
+  ui.button('left').dispatch('pointerdown', { pointerId: 3 });
+  assert.deepEqual(Object.keys(ui.game.controls), ['left']);
+  ui.button('left').dispatch('pointermove', { pointerId: 3, clientX: 75, clientY: 10 });
+  assert.deepEqual(Object.keys(ui.game.controls), ['right']);
+  ui.button('left').dispatch('pointermove', { pointerId: 3, clientX: 140, clientY: 10 });
+  assert.deepEqual(Object.keys(ui.game.controls), ['right']);
+  ui.button('left').dispatch('pointermove', { pointerId: 9, clientX: 20, clientY: 10 });
+  assert.deepEqual(Object.keys(ui.game.controls), ['right']);
+  ui.button('left').dispatch('pointerup', { pointerId: 3 });
+  assert.deepEqual(Object.keys(ui.game.controls), []);
+});
+
+test('the first touch on a fine-pointer device shows the touch controls', () => {
+  const ui = loadInterface();
+  const html = ui.element('html');
+  assert.equal(ui.element('message-hint').textContent, '← → move · Z X turn · ↓ faster');
+  ui.document.dispatch('pointerdown', { pointerType: 'mouse' });
+  assert.equal(html.classList.contains('touch'), false);
+  ui.document.dispatch('pointerdown', { pointerType: 'touch' });
+  assert.equal(html.classList.contains('touch'), true);
+  assert.equal(ui.element('message-hint').textContent, 'hold the words below.');
+});
+
+test('the message on the board plays, resumes and replays, and the pause on the board pauses', () => {
+  const ui = loadInterface({ mobile: true });
+  const play = ui.element('play');
+  const pause = ui.element('pause');
+  assert.equal(play.textContent, 'play');
+  assert.equal(pause.hidden, true);
+  assert.equal(ui.element('message-hint').textContent, 'hold the words below.');
+  play.dispatch('click');
   const active = ui.game.active;
   assert.equal(ui.game.state, 'playing');
-  assert.equal(pause.textContent, 'pause');
-  assert.equal(ui.scrolledElements.at(-1), '.play-layout');
+  assert.equal(pause.hidden, false);
   ui.button('left').dispatch('pointerdown', { pointerId: 1 });
   pause.dispatch('click');
   assert.equal(ui.game.state, 'paused');
-  assert.equal(pause.textContent, 'resume');
+  assert.equal(play.textContent, 'resume');
+  assert.equal(ui.element('restart').hidden, false);
+  assert.equal(ui.element('message-title').textContent, 'paused');
   assert.deepEqual(Object.keys(ui.game.controls), []);
-  pause.dispatch('click');
+  play.dispatch('click');
   assert.equal(ui.game.state, 'playing');
   assert.equal(ui.game.active, active);
-  assert.equal(pause.textContent, 'pause');
   ui.game.state = 'over';
   ui.game.score = 100;
   ui.game.onEvent({ type: 'over', score: 100 });
-  assert.equal(pause.textContent, 'play again');
-  pause.dispatch('click');
+  assert.equal(play.textContent, 'play again');
+  assert.equal(pause.hidden, true);
+  ui.advanceTimers(700);
+  play.dispatch('click');
   assert.equal(ui.game.state, 'playing');
   assert.notEqual(ui.game.active, active);
   assert.equal(ui.game.score, 0);
-  assert.equal(pause.textContent, 'pause');
+});
+
+test('the paused message offers a fresh start, and Escape closes settings before it resumes', () => {
+  const ui = loadInterface();
+  ui.start();
+  ui.game.score = 50;
+  ui.element('settings-button').dispatch('click');
+  assert.equal(ui.element('settings').hidden, false);
+  ui.key('keydown', 'Escape');
+  assert.equal(ui.element('settings').hidden, true);
+  assert.equal(ui.game.state, 'paused');
+  ui.element('restart').dispatch('click');
+  assert.equal(ui.game.state, 'playing');
+  assert.equal(ui.game.score, 0);
+});
+
+test('the loop stops drawing once play stops and restarts when play resumes', () => {
+  const ui = loadInterface();
+  ui.frame(0);
+  assert.throws(() => ui.frame(16), /schedule its next frame/);
+  ui.start();
+  ui.frame(100);
+  ui.frame(117);
+  ui.key('keydown', 'KeyP');
+  ui.frame(134);
+  const seconds = ui.game.seconds;
+  assert.throws(() => ui.frame(151), /schedule its next frame/);
+  ui.key('keydown', 'KeyP');
+  ui.frame(5000);
+  assert.equal(ui.game.seconds, seconds);
+  ui.frame(5017);
+  assert.ok(ui.game.seconds > seconds && ui.game.seconds < seconds + 0.02);
 });
 
 // These tests exercise event wiring and drawing calls in a Node VM. They do not verify browser rendering.
