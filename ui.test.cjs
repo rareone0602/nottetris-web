@@ -40,6 +40,7 @@ function loadInterface({ storage = {}, storageDisabled = false, mobile = false, 
   const timers = new Map();
   const frames = [];
   const values = new Map(Object.entries(storage));
+  if (mobile) element('html').classList.add('touch');
   const games = [];
   const drawingContext = new Proxy({}, {
     get(target, name) {
@@ -359,7 +360,7 @@ test('blocked storage and malformed saved values leave the game playable', () =>
   assert.equal(ui.element('best').textContent, '300');
   assert.match(ui.element('announcer').textContent, /2 rows cleared\. 300 points/);
   assert.equal(ui.element('board-note').hidden, false);
-  assert.equal(ui.element('board-note').textContent, '+300, two rows');
+  assert.equal(ui.element('board-note').textContent, '+300\ntwo rows');
   ui.advanceTimers(1800);
   assert.equal(ui.element('board-note').hidden, true);
   assert.equal(ui.element('board-note').textContent, '');
@@ -383,7 +384,8 @@ test('game over releases every input and presents the replay action', () => {
   assert.equal(ui.element('play').textContent, 'play again');
   assert.ok(ui.controls.every(button => button.disabled));
   assert.match(ui.element('announcer').textContent, /no room left\. score 200/);
-  assert.equal(ui.element('message-text').textContent, 'score 200: a new best.');
+  assert.equal(ui.element('message-result').textContent, '200');
+  assert.equal(ui.element('message-text').textContent, 'a new best.');
   assert.equal(ui.element('play').disabled, true);
   ui.key('keydown', 'Enter');
   ui.element('play').dispatch('click');
@@ -431,7 +433,7 @@ test('the first touch on a fine-pointer device shows the touch controls', () => 
   assert.equal(html.classList.contains('touch'), false);
   ui.document.dispatch('pointerdown', { pointerType: 'touch' });
   assert.equal(html.classList.contains('touch'), true);
-  assert.equal(ui.element('message-hint').textContent, 'hold the words below.');
+  assert.equal(ui.element('message-hint').textContent, 'hold the words by the board.');
 });
 
 test('the message on the board plays, resumes and replays, and the pause on the board pauses', () => {
@@ -440,7 +442,7 @@ test('the message on the board plays, resumes and replays, and the pause on the 
   const pause = ui.element('pause');
   assert.equal(play.textContent, 'play');
   assert.equal(pause.hidden, true);
-  assert.equal(ui.element('message-hint').textContent, 'hold the words below.');
+  assert.equal(ui.element('message-hint').textContent, 'hold the words by the board.');
   play.dispatch('click');
   const active = ui.game.active;
   assert.equal(ui.game.state, 'playing');
@@ -505,13 +507,15 @@ test('without storage, best scores last the session and a lower score is not a n
   ui.game.score = 500;
   ui.game.state = 'over';
   ui.game.onEvent({ type: 'over', score: 500 });
-  assert.equal(ui.element('message-text').textContent, 'score 500: a new best.');
+  assert.equal(ui.element('message-result').textContent, '500');
+  assert.equal(ui.element('message-text').textContent, 'a new best.');
   ui.advanceTimers(700);
   ui.start();
   ui.game.score = 100;
   ui.game.state = 'over';
   ui.game.onEvent({ type: 'over', score: 100 });
-  assert.equal(ui.element('message-text').textContent, 'score 100 · best 500');
+  assert.equal(ui.element('message-result').textContent, '100');
+  assert.equal(ui.element('message-text').textContent, 'best 500');
   assert.equal(ui.element('best').textContent, '500');
 });
 

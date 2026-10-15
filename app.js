@@ -24,7 +24,6 @@
   const pauseButton = byId('pause');
   const note = byId('board-note');
   const controlButtons = Array.from(document.querySelectorAll('[data-action]'));
-  const touchQuery = window.matchMedia('(any-pointer: coarse)');
   const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
   const ACTION_LABELS = { ready: 'play', playing: 'pause', paused: 'resume', over: 'play again' };
   const NUMBER_WORDS = ['no', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten'];
@@ -58,8 +57,10 @@
   letters.checked = readSetting('letters', 'false') === 'true';
   pace.value = readSetting('pace', 'original') === 'gentle' ? 'gentle' : 'original';
 
+  /* The page marks a touch screen with the class "touch" on the html element: at load when touch is the primary
+     input, and later on the first touch. */
   function usesTouch() {
-    return touchQuery.matches || Boolean(root && root.classList.contains('touch'));
+    return Boolean(root && root.classList.contains('touch'));
   }
 
   function primeAudio() {
@@ -92,11 +93,14 @@
 
   function announce(message) { byId('announcer').textContent = message; }
 
+  /* Writes the points beside the cleared rows, centred on them. */
   function showNote({ rows, count, points, level, levelUp }) {
-    const lines = ['+' + format(points) + (count > 1 ? ', ' + (NUMBER_WORDS[count] || count) + ' rows' : '')];
+    const lines = ['+' + format(points)];
+    if (count > 1) lines.push((NUMBER_WORDS[count] || count) + ' rows');
     if (levelUp) lines.push('level ' + level);
     note.textContent = lines.join('\n');
-    note.style.top = (Render.rowTop(Math.min(...rows)) * 100).toFixed(2) + '%';
+    const middle = (Render.rowTop(Math.min(...rows)) + Render.rowTop(Math.max(...rows) + 1)) / 2;
+    note.style.top = (middle * 100).toFixed(2) + '%';
     note.hidden = false;
     clearTimeout(noteTimer);
     noteTimer = setTimeout(hideNote, NOTE_MILLISECONDS);
@@ -160,17 +164,21 @@
     setTimeout(() => { actionsLocked = false; updateInterface(); }, GAME_OVER_LOCK_MILLISECONDS);
   }
 
+  /* The message over the board when it is not in play: a title, the final score as a result, and lines of small
+     print. The best score is repeated for phones, whose score line has no room for it. */
   function messageFor(state) {
     const touch = usesTouch();
-    if (state === 'ready') {
-      return { title: 'fill a row', text: '81% will do, at any angle.',
-        hint: touch ? 'hold the words below.' : '← → move · Z X turn · ↓ faster' };
-    }
-    if (state === 'paused') return { title: 'paused', text: touch ? 'the pile will keep.' : 'P or Esc carries on.', hint: '' };
     const best = bestScore();
-    return { title: 'no room left', hint: '',
-      text: game.score > bestBefore && game.score > 0 ? 'score ' + format(game.score) + ': a new best.' :
-        'score ' + format(game.score) + ' · best ' + format(best) };
+    const bestLine = best > 0 ? 'best ' + format(best) : '';
+    if (state === 'ready') {
+      return { title: 'fill a row', result: '', text: '81% will do, at any angle.',
+        hint: touch ? 'hold the words by the board.' : '← → move · Z X turn · ↓ faster', best: bestLine };
+    }
+    if (state === 'paused') {
+      return { title: 'paused', result: '', text: touch ? 'the pile will keep.' : 'P or Esc carries on.', hint: '', best: bestLine };
+    }
+    return { title: 'no room left', result: format(game.score), hint: '', best: '',
+      text: game.score > bestBefore && game.score > 0 ? 'a new best.' : bestLine };
   }
 
   function updateInterface() {
@@ -191,9 +199,10 @@
     if (state !== 'playing') {
       const message = messageFor(state);
       byId('message-title').textContent = message.title;
-      byId('message-text').textContent = message.text;
-      byId('message-hint').textContent = message.hint;
-      byId('message-hint').hidden = !message.hint;
+      for (const part of ['result', 'text', 'hint', 'best']) {
+        byId('message-' + part).textContent = message[part];
+        byId('message-' + part).hidden = !message[part];
+      }
     }
     for (const button of controlButtons) button.disabled = state !== 'playing';
     drawPreview();
@@ -361,7 +370,8 @@
       clearProgress: reducedMotion.matches ? 1 : 1 - Math.max(0, game.clearTimer) / Core.CLEAR_SECONDS,
       densities: game.densities,
       danger: !ready && Render.inDanger(game.pileTop()),
-      letters: letters.checked
+      letters: letters.checked,
+      resting: game.state !== 'playing'
     });
   }
 

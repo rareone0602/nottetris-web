@@ -14,7 +14,7 @@
   <link rel="stylesheet" href="site/notebook.css">
   <link rel="stylesheet" href="site/pencil.css">
   <link rel="stylesheet" href="game.css">
-  <script>if (window.matchMedia && matchMedia('(any-pointer: coarse)').matches) document.documentElement.classList.add('touch');</script>
+  <script>if (window.matchMedia && matchMedia('(pointer: coarse)').matches) document.documentElement.classList.add('touch');</script>
   <script defer src="vendor/matter.min.js"></script>
   <script defer src="core.js"></script>
   <script defer src="input.js"></script>
@@ -35,7 +35,7 @@
   <header>
     <h1>not tetris</h1>
     <p class="intro">falling blocks, with rather more physics.</p>
-    <p class="credit">adapted from <a href="https://stabyourself.net/nottetris2/">Not Tetris 2</a> by <a href="https://stabyourself.net/">Stabyourself</a>.</p>
+    <p class="credit">adapted from <a href="https://stabyourself.net/nottetris2/">not tetris 2</a> by <a href="https://stabyourself.net/">Stabyourself</a>.</p>
   </header>
 
   <section class="game" id="game" aria-label="game">
@@ -62,7 +62,7 @@
             <div><dt>level</dt><dd class="hand" id="level">0</dd></div>
             <div class="best"><dt id="best-label">best</dt><dd class="hand" id="best">0</dd></div>
           </dl>
-          <div class="next-piece"><p>next</p><canvas id="next" width="128" height="64" role="img" aria-label="next piece"></canvas></div>
+          <div class="next-piece"><p>next</p><canvas id="next" width="96" height="64" role="img" aria-label="next piece"></canvas></div>
         </div>
       </div>
 
@@ -72,9 +72,11 @@
         <p class="board-note" id="board-note" aria-hidden="true" hidden></p>
         <div class="board-message" id="board-message">
           <p class="hand message-title" id="message-title">fill a row</p>
+          <p class="result" id="message-result" hidden></p>
+          <p class="message-actions"><button id="play" class="btn" type="button">play</button><button id="restart" class="btn quiet" type="button" hidden>start again</button></p>
           <p class="message-text" id="message-text">81% will do, at any angle.</p>
           <p class="message-text" id="message-hint"></p>
-          <p class="message-actions"><button id="play" class="btn" type="button">play</button><button id="restart" class="btn quiet" type="button" hidden>start again</button></p>
+          <p class="message-text message-best" id="message-best" hidden></p>
         </div>
       </div>
 
@@ -90,7 +92,7 @@
         </div>
       </div>
     </div>
-    <p id="board-help" class="announcer">Move with the left and right arrows. Hold Z or X to turn. Hold down or space to fall faster. P or Escape pauses, and Enter starts. On a touch screen, the controls are under the board. Pieces keep moving after they land.</p>
+    <p id="board-help" class="announcer">Move with the left and right arrows. Hold Z or X to turn. Hold down or space to fall faster. P or Escape pauses, and Enter starts. On a touch screen, the controls are by the board. Pieces keep moving after they land.</p>
     <p id="announcer" class="announcer" role="status" aria-live="polite" aria-atomic="true"></p>
     <noscript><p class="error">javascript is needed to play this game.</p></noscript>
   </section>
@@ -120,9 +122,9 @@
         <li><a href="https://github.com/Stabyourself/nottetris2">original game and source</a></li>
         <li><a href="LICENSE-original.txt">original licence: WTFPL v2</a></li>
         <li><a href="https://github.com/rareone0602/nottetris-web">browser source</a></li>
-        <li><a href="vendor/MATTER-LICENSE.txt">Matter.js · MIT</a></li>
+        <li><a href="vendor/MATTER-LICENSE.txt">matter.js · MIT</a></li>
       </ul>
-      <p class="small">the original music and artwork are not used. physics by <a href="https://brm.io/matter-js/">Matter.js</a>, by Liam Brummitt and contributors.</p>
+      <p class="small">the original music and artwork are not used. physics by <a href="https://brm.io/matter-js/">matter.js</a>, by Liam Brummitt and contributors.</p>
     </section>
   </article>
   <footer><ul><li>browser adaptation by <a href="https://www.linkedin.com/in/po-hung-yeh-6a8134116">me</a></li><li><a href="https://github.com/rareone0602/nottetris-web">source · AGPL-3.0-only</a></li><li>gravity has the casting vote.</li></ul></footer>

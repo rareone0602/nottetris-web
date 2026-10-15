@@ -16,7 +16,7 @@
   const VIEW = { width: 336, height: 600 };
   const ORIGIN = { x: 6, y: VIEW.height - 1 - Core.HEIGHT };
   const METER = { x: ORIGIN.x + Core.WIDTH + 10, length: 16 };
-  const PREVIEW = { width: 128, height: 64, scale: 0.72 };
+  const PREVIEW = { width: 96, height: 64, scale: 0.72 };
   const HATCH = { spacing: 4.5, slope: 0.68 };
   const DANGER_ROWS = 3;
 
@@ -92,7 +92,7 @@
       if (letters && Core.area(polygon) > 180) {
         const { left, right, top, bottom } = boundsOf(polygon);
         context.fillStyle = INK;
-        context.font = '300 14px "Shantell Sans", sans-serif';
+        context.font = '300 16px "Shantell Sans", sans-serif';
         context.textAlign = 'center';
         context.textBaseline = 'middle';
         context.fillText(shape.name, (left + right) / 2, (top + bottom) / 2);
@@ -106,6 +106,21 @@
     context.moveTo(startX, startY);
     context.bezierCurveTo(startX + (endX - startX) * 0.34 + 0.35, startY + (endY - startY) * 0.34 - 0.45,
       startX + (endX - startX) * 0.68 - 0.4, startY + (endY - startY) * 0.68 + 0.5, endX, endY);
+    context.strokeStyle = ink;
+    context.lineWidth = width;
+    context.lineCap = 'round';
+    context.stroke();
+  }
+
+  /* The house squiggle (site/pencil.css, --mark-squiggle), drawn along a line from startX to endX with the same
+     humps: 13 units long, alternately up and down. */
+  function squiggle(context, startX, endX, y, ink, width) {
+    context.beginPath();
+    context.moveTo(startX, y);
+    for (let x = startX, up = true; x < endX; x += 13, up = !up) {
+      if (up) context.bezierCurveTo(x + 5, y - 5, x + 9, y - 5, x + 13, y);
+      else context.bezierCurveTo(x + 4, y + 5, x + 8, y + 5, x + 13, y);
+    }
     context.strokeStyle = ink;
     context.lineWidth = width;
     context.lineCap = 'round';
@@ -126,7 +141,8 @@
     context.stroke();
   }
 
-  function drawGrid(context) {
+  /* Faint rules across the rows only: pieces turn freely, so there are no columns to mark. */
+  function drawRows(context) {
     context.strokeStyle = INK_3;
     context.globalAlpha = 0.22;
     context.lineWidth = 0.6;
@@ -136,38 +152,37 @@
       context.lineTo(Core.WIDTH, row * Core.CELL);
     }
     context.stroke();
-    context.setLineDash([1, 7]);
-    context.beginPath();
-    for (let column = 1; column < Core.COLS; column++) {
-      context.moveTo(column * Core.CELL, 0);
-      context.lineTo(column * Core.CELL, Core.HEIGHT);
-    }
-    context.stroke();
-    context.setLineDash([]);
     context.globalAlpha = 1;
   }
 
-  /* A row being cleared is washed out and crossed through from left to right as `progress` runs from 0 to 1. */
-  function drawStrike(context, row, progress) {
-    const top = row * Core.CELL;
-    context.globalAlpha = 0.8;
+  function wash(context, x, y, width, height, opacity) {
+    context.globalAlpha = opacity;
     context.fillStyle = PAPER;
-    context.fillRect(0, top, Core.WIDTH, Core.CELL);
+    context.fillRect(x, y, width, height);
     context.globalAlpha = 1;
+  }
+
+  /* A row being cleared is washed out, and a squiggle, the mark for a break, draws itself along it from left to
+     right as `progress` runs from 0 to 1. */
+  function drawClearing(context, row, progress) {
+    const top = row * Core.CELL;
+    wash(context, 0, top, Core.WIDTH, Core.CELL, 0.8);
     context.save();
     context.beginPath();
-    context.rect(-2, top - 2, (Core.WIDTH + 4) * progress, Core.CELL + 4);
+    context.rect(-2, top, (Core.WIDTH + 4) * progress, Core.CELL);
     context.clip();
-    pencilLine(context, 2, top + Core.CELL / 2, Core.WIDTH - 2, top + Core.CELL / 2, INK, 1.5);
+    squiggle(context, 4, Core.WIDTH - 4, top + Core.CELL / 2, INK_2, 1.4);
     context.restore();
   }
 
+  /* The walls start a little below the canvas's top edge, which lies on a rule, so that they stay clear of any
+     words written on that rule. */
   function drawWell(context, danger) {
     const left = ORIGIN.x - 1;
     const right = ORIGIN.x + Core.WIDTH + 1;
     const floor = ORIGIN.y + Core.HEIGHT;
-    pencilLine(context, left, 0, left, floor);
-    pencilLine(context, right, 0, right, floor);
+    pencilLine(context, left, 4, left, floor);
+    pencilLine(context, right, 4, right, floor);
     pencilLine(context, left - 1, floor, right + 1, floor);
     /* The top line stops just short of the walls, so the message over the board covers all of it. */
     const start = ORIGIN.x + 4;
@@ -212,7 +227,8 @@
   }
 
   /* Draws the board. The scene holds `pieces`, the `active` piece, the `clearing` rows and their `clearProgress`,
-     the row `densities`, whether the pile is in `danger` of reaching the top line, and whether to draw `letters`. */
+     the row `densities`, whether the pile is in `danger` of reaching the top line, whether to draw `letters`, and
+     whether play is `resting` (ready, paused or over), when the well is washed out under the message. */
   function drawBoard(context, canvas, scene) {
     scaleTo(context, canvas, VIEW.width, VIEW.height);
     context.fillStyle = PAPER;
@@ -222,9 +238,10 @@
     context.beginPath();
     context.rect(0, -ORIGIN.y, Core.WIDTH, Core.HEIGHT + ORIGIN.y);
     context.clip();
-    drawGrid(context);
+    drawRows(context);
     for (const body of scene.pieces) drawPiece(context, body, { active: body === scene.active, letters: scene.letters });
-    for (const row of scene.clearing) drawStrike(context, row, scene.clearProgress);
+    for (const row of scene.clearing) drawClearing(context, row, scene.clearProgress);
+    if (scene.resting) wash(context, 0, -ORIGIN.y, Core.WIDTH, Core.HEIGHT + ORIGIN.y, 0.78);
     context.restore();
     drawWell(context, scene.danger);
     drawMeters(context, scene.densities);

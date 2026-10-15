@@ -38,17 +38,21 @@ html:has(.game.is-playing) { overscroll-behavior: none; }
 .toolbar > * { position: relative; }
 .touch :is(.toolbar, .board-pause) > *::after { content: ''; position: absolute; inset: calc(var(--L) / -2) -10px; }
 
-/* Settings open under the toolbar; the game pauses while they are open. */
+/* Settings open under the toolbar; the game pauses while they are open. The label's line is set at its own size,
+   so that it stays one rule tall. */
 .settings { --lift: calc(var(--L) / 2 - 1px - .35 * 18px); margin-bottom: var(--L); }
+.settings > p:first-child { font-size: 15px; }
 .settings .check { cursor: pointer; }
 
-/* Scores: each is a label on one rule and a number in the hand on the next. */
+/* Scores: each is a label on one rule and a number in the hand on the next. On a phone the next piece takes both
+   rules beside them, and its label is for screen readers only. */
 .side { display: flex; column-gap: var(--L); }
 .scores { flex: 1; min-width: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); column-gap: 12px; }
 .scores .best { display: none; }
 .scores dd { font: 300 22px/var(--L) var(--face); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 .next-piece { flex: none; }
-.next-piece canvas { display: block; width: calc(var(--L) * 2); height: var(--L); }
+.next-piece canvas { display: block; width: calc(var(--L) * 3); height: calc(var(--L) * 2); }
+.game .next-piece p { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 
 /* The board: a picture whose top and bottom lie on rules. */
 .board-wrap { grid-area: board; position: relative; width: calc(var(--board-h) * .56); height: var(--board-h);
@@ -58,21 +62,28 @@ html:has(.game.is-playing) { overscroll-behavior: none; }
 .game.is-playing .board-wrap:focus-visible { outline: none; }  /* In play, the moving piece shows where the keys go. */
 .game.is-playing .board-wrap { touch-action: none; }
 #board { display: block; width: 100%; height: 100%; }
-/* Pause sits in the corner of the two rows above the top line, centred in them at any board size. */
-.board-pause { position: absolute !important; top: 0 !important; right: calc(100% * 36 / 336); height: calc(100% * 59 / 600);
-  display: flex; align-items: center; font-size: 15px; }
+/* Pause sits on the board's first rule, in the corner above the top line. On a short board, where the top line
+   comes within a rule of the edge, it is raised just enough to clear it. */
+.board-pause { position: absolute !important; right: calc(100% * 36 / 336); font-size: 15px;
+  top: calc(var(--sit) - max(0px, var(--L) + 6px - var(--board-h) * 59 / 600)) !important; }
 
-/* The points, written beside a cleared row for a moment. JavaScript sets its top to the row's. */
-.board-note { position: absolute !important; right: calc(100% * 40 / 336); transform: translateY(-100%); padding: 0 .3em;
-  background: var(--paper); font: 300 22px/var(--L) var(--face); --hand: 50; color: var(--ink-2); text-align: right;
-  white-space: pre-line; pointer-events: none; animation: note-in .25s ease-out; }
-@keyframes note-in { from { opacity: 0; translate: 0 4px; } }
+/* The points, a note beside the cleared rows outside the well, with the arrow pointing at them. JavaScript centres it
+   on the rows. */
+.board-note { position: absolute !important; left: calc(100% + 4px); width: max-content; transform: translateY(-50%); display: flex; column-gap: 4px;
+  font: 300 22px/var(--L) var(--face); --hand: 50; color: var(--ink-2); white-space: pre-line; pointer-events: none;
+  animation: note-in .25s ease-out; }
+.board-note::before { content: ''; flex: none; width: 24px; height: var(--L); transform: scaleX(-1); filter: url(#graphite);
+  background: var(--mark-arrow) center / 24px 10px no-repeat; }
+@keyframes note-in { from { opacity: 0; } }
 
-/* The message over the board when it is not in play, with the one primary button. */
-.board-message { position: absolute; top: var(--L); left: calc(100% * 9 / 336); width: calc(100% * 294 / 336);
-  padding: 0 8px calc(var(--L) / 2); background: var(--paper); text-align: center; text-wrap: balance; }
+/* The message written in the well when it is not in play, starting on the first rule under the top line. The well
+   is washed out behind it rather than covered. It holds the one primary button. */
+.board-message { position: absolute; --lift: 0px; top: calc(var(--L) * 2); left: calc(100% * 14 / 336); right: calc(100% * 38 / 336); }
+@supports (top: round(up, 1px, 1px)) { .board-message { top: round(up, calc(var(--board-h) * 62 / 600), var(--L)); } }
 .message-title { font: 300 26px/var(--L) var(--face); }
-.message-actions { display: flex; flex-wrap: wrap; justify-content: center; column-gap: calc(var(--L) / 1.5); margin-top: var(--L) !important; }
+.message-actions { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: calc(var(--L) / 1.5); row-gap: var(--L); }
+.message-actions > .btn:first-child { margin-left: 3px; }
+.touch .message-actions > .btn::after { content: ''; position: absolute; inset: calc(var(--L) / -2) -10px; }
 
 /* Touch controls: a cluster for each thumb. A label sits on the bottom rule of its zone, and "turn left" takes two
    lines. A held zone is pressed harder. */
@@ -80,7 +91,7 @@ html:has(.game.is-playing) { overscroll-behavior: none; }
 .touch .touch-controls { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: var(--L); }
 .cluster { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: repeat(2, calc(var(--L) * 2)); }
 .cluster .down { grid-column: 1 / -1; }
-.turn .control { grid-row: 1 / -1; }
+.turn .control { grid-row: 1 / -1; padding-bottom: var(--L); }  /* A rule above the move labels, so the two "left"s are told apart. */
 .control { display: flex; flex-direction: column; justify-content: flex-end; align-items: center; padding: 0;
   touch-action: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; }
 .control > span { display: block; width: min-content; line-height: var(--L); position: relative; top: var(--sit); text-align: center; }
@@ -99,7 +110,8 @@ html:has(.game.is-playing) { overscroll-behavior: none; }
   .scores .best { display: block; }
   .scores dd { font-size: 26px; }
   .next-piece { margin-top: var(--L); }
-  .next-piece canvas { width: calc(var(--L) * 4); height: calc(var(--L) * 2); }
+  .game .next-piece p { position: relative; width: auto; height: auto; overflow: visible; clip-path: none; }
+  .message-best { display: none; }
   .board-wrap { scroll-margin: calc(var(--L) / 2) 0; }
   .touch .stage { --chrome: calc(var(--L) * 5.5); }
   .touch .touch-controls { margin-top: var(--L); }
@@ -112,14 +124,18 @@ html:has(.game.is-playing) { overscroll-behavior: none; }
   .touch .stage { grid-template-columns: minmax(6.5em, 1fr) auto minmax(10em, 1.6fr) minmax(6.5em, 1fr); grid-template-areas: 'move board panel turn';
     column-gap: var(--L); --chrome: calc(var(--L) / 2); --beside: calc(23em + var(--L) * 3); }
   .touch .toolbar { column-gap: 1em; }
-  .touch .scores { row-gap: 0; }
+  .touch .side { display: block; }
+  .touch .scores { grid-template-columns: repeat(2, minmax(0, 1fr)); row-gap: 0; }
+  .touch .scores .best { display: block; }
+  .touch .next-piece { margin-top: 0; }
+  .touch .game .next-piece p { position: relative; width: auto; height: auto; overflow: visible; clip-path: none; }
+  .touch .message-best { display: none; }
   .touch .touch-controls { display: contents; }
   .touch .cluster { align-self: end; }
   .touch .move { grid-area: move; }
   .touch .turn { grid-area: turn; }
   .touch .board-wrap { scroll-margin: calc(var(--L) / 4) 0; }
   .touch .scores dd { font-size: 22px; }
-  .touch .next-piece canvas { width: calc(var(--L) * 2); height: var(--L); }
 }
 @media (orientation: landscape) and (max-height: 500px) {
   main { padding-right: max(12px, env(safe-area-inset-right)); padding-left: max(calc(var(--margin-x) + 12px), env(safe-area-inset-left)); }
@@ -136,7 +152,8 @@ html:has(.game.is-playing) { overscroll-behavior: none; }
 @media (max-width: 720px) {
   main { padding-bottom: max(var(--L), env(safe-area-inset-bottom)); }
   .message-title { font-size: 22px; }
-  .instructions :is(th, td) { font-size: 15px; padding-right: 8px; }
+  .board-note { font-size: 18px; }
+  .board-note::before { width: 20px; background-size: 20px 8px; }
   .instructions th { white-space: normal; }
 }
 @media (prefers-reduced-motion: reduce) {
