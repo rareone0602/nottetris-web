@@ -1,0 +1,192 @@
+/* The pencil layer: everything drawn on the paper. Load it after site/notebook.css and
+   inline the #graphite filter in the page (STYLE.md §6). Every block is a whole number
+   of rules tall, and text is shifted onto the rules. See STYLE.md §6 and §7;
+   specimen.html demonstrates every component.
+
+   Classes:
+     .doc                 The writing column: h1-h3, lists, quotes, code, hr, tables, figures.
+     td.n, th.n           A right-aligned number column.
+     figure style="--rules: 6"   A picture this many rules tall; img.drawing blends into the paper.
+     .meta                A date line, or a contents line of links, whose items are separated by dots.
+     header nav           The navigation; the aria-current="page" item gets the ring.
+     .row                 A label, its field and its message, kept together.
+     .field, select.field A text field or a select; aria-invalid="true" marks an error.
+     .check               A checkbox and its text, inside a label.
+     .btn, .btn.quiet     The primary button, and every other button.
+     .actions             A row of buttons.
+     .note                A few hand-lettered words in ink-2 (.hand, in notebook.css, sets only the lettering).
+     .error .result .loading .empty    Tool feedback.
+     .mark.arrow|ring|squiggle|tick|cross|caret    A mark inside running text.
+     .titleline, .portrait              A character beside the title; role="button" makes it one to say hi to (src/live.js).
+     .announcer           A live region (role="status") that says what happened, for screen readers only. */
+
+/* The marks, defined once. A data URI cannot read var(), so each one hard-codes its ink
+   as a hex value; update them here if an ink changes. */
+:root {
+  --mark-arrow: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 50 20'><path d='M2 12C12 4 28 3 44 11M44 11l-5-7.5M44 11l-9 .5' fill='none' stroke='%236d6a63' stroke-width='1.3' stroke-linecap='round' stroke-linejoin='round' vector-effect='non-scaling-stroke'/></svg>");
+  --mark-ring: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 104 46' preserveAspectRatio='none'><path d='M60 5C30 2 5 10 6 24s28 19 52 17 42-8 40-20S72 3 44 7' fill='none' stroke='%236d6a63' stroke-width='1.2' stroke-linecap='round' vector-effect='non-scaling-stroke'/></svg>");
+  --mark-squiggle: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='90' height='10'><path d='M2 6c5-5 9-5 13 0s8 5 13 0 9-5 13 0 8 5 13 0 9-5 13 0 8 4 13 0' fill='none' stroke='%2397938a' stroke-width='1.3' stroke-linecap='round'/></svg>");
+  --mark-side: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 4 100' preserveAspectRatio='none'><path d='M2 0C2.9 22 1.3 41 2.2 63S1.5 88 2 100' fill='none' stroke='%2397938a' stroke-width='1.1' stroke-linecap='round' vector-effect='non-scaling-stroke'/></svg>");
+  --mark-ground: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 300 8' preserveAspectRatio='none'><path d='M1 4.3C60 3.4 130 5 190 4.1S270 3.5 299 4.4' fill='none' stroke='%233d3c39' stroke-opacity='.7' stroke-width='1.4' stroke-linecap='round' vector-effect='non-scaling-stroke'/></svg>");
+  --mark-box: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 32' preserveAspectRatio='none'><path d='M1.5 4.2C20 2.6 45 4.4 70 3.2S94 2.8 99 3.9M96.8 1.2C97.9 9 96.6 19 97.6 31.2M99.2 28.8C75 30.4 50 28.6 25 29.9S5 29.2 1 30.1M3.4 31.6C2.1 22 3.6 11 2.6 1.6' fill='none' stroke='%233d3c39' stroke-opacity='.8' stroke-width='1.3' stroke-linecap='round' vector-effect='non-scaling-stroke'/></svg>");
+  --mark-tick: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 22 22'><path d='M5.2 10.6c1.6 1.2 2.8 2.8 3.7 4.9C11.4 9.6 15 4.6 21 .8' fill='none' stroke='%233d3c39' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+  --mark-cross: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'><path d='M4 4c4 4 8 8.5 12.5 12.5M16 3.5C12 8 8 12 3.5 16.5' fill='none' stroke='%23a64a3f' stroke-width='1.4' stroke-linecap='round'/></svg>");
+  --mark-caret: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 14 10'><path d='M2 3.2c1.8 1.6 3.4 3.2 4.8 4.9 1.7-1.9 3.3-3.6 5.3-5.4' fill='none' stroke='%236d6a63' stroke-width='1.3' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+  /* The same marks in a second ink or for a second purpose. */
+  --mark-box-again: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 32' preserveAspectRatio='none'><path d='M1.5 4.2C20 2.6 45 4.4 70 3.2S94 2.8 99 3.9M96.8 1.2C97.9 9 96.6 19 97.6 31.2M99.2 28.8C75 30.4 50 28.6 25 29.9S5 29.2 1 30.1M3.4 31.6C2.1 22 3.6 11 2.6 1.6M2.5 3.1C30 4.2 62 2.4 98 3.2M98.4 2.4C97.4 12 98.6 22 97.2 30.4' fill='none' stroke='%233d3c39' stroke-opacity='.85' stroke-width='1.4' stroke-linecap='round' vector-effect='non-scaling-stroke'/></svg>");
+  --mark-line: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 300 8' preserveAspectRatio='none'><path d='M1 4.4C60 3.3 120 5 180 4.1S275 3.4 299 4.6' fill='none' stroke='%236d6a63' stroke-width='1.2' stroke-linecap='round' vector-effect='non-scaling-stroke'/></svg>");
+  --mark-wave: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='60' height='8'><path d='M0 4.5c3.6-3 7-3 10.5 0s7 2.8 10 0 7.4-3.1 10.5 0 6.8 3 9.8 0 7.2-2.9 10.2 0 6.4 3 9 0' fill='none' stroke='%23a64a3f' stroke-width='1.2' stroke-linecap='round'/></svg>");
+  --mark-checkbox: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 22 22'><path d='M2.6 4.1C7.5 3.4 12 3.9 16.8 3.5M16.3 2.9C16.7 8 16.4 13 16.9 18.4M17.4 17.9C12 18.4 7.4 17.8 2.3 18.2M3 19C2.6 13.4 3.2 8.4 2.7 3.2' fill='none' stroke='%236d6a63' stroke-width='1.2' stroke-linecap='round'/></svg>");
+  --mark-drawing: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='90' height='10'><style>path{stroke-dasharray:90;animation:d 1.6s ease-in-out infinite}@keyframes d{from{stroke-dashoffset:90}60%25,to{stroke-dashoffset:0}}</style><path d='M2 6c5-5 9-5 13 0s8 5 13 0 9-5 13 0 8 5 13 0 9-5 13 0 8 4 13 0' fill='none' stroke='%236d6a63' stroke-width='1.3' stroke-linecap='round'/></svg>");
+}
+
+/* The writing column: a single column, at most 42em wide, shifted so that 18px text sits
+   on the rules (--sit at 18px). Larger text moves by its own --sit minus this lift. */
+.doc { --lift: calc(var(--L) / 2 - 1px - .35 * 18px); position: relative; top: var(--lift); max-width: 42em; margin-top: calc(var(--L) * 2); overflow-wrap: break-word; text-wrap: pretty; }
+.doc * { margin: 0; }
+.doc > * + *, .doc blockquote > * + * { margin-top: var(--L); }   /* One blank rule between blocks. */
+.doc :is(h1, h2, h3, hr, .lead, .meta) + * { margin-top: 0; }     /* None after a heading, break, lead-in or date line. */
+
+/* Hand-lettered: headings, table headers, captions, list numbers and tool feedback. */
+.doc :is(h2, h3, th, figcaption), .doc ol > li::before, .result, .empty { --hand: 50; }
+
+/* Headings: a part title is three rules tall, h2 two, h3 one. Sizes scale by 1.2 from 18px. */
+.doc h1 { font: 300 54px/calc(var(--L) * 3) var(--face); height: auto; width: auto; white-space: normal; top: calc(var(--sit) + var(--L) - var(--lift)); }
+.doc h2 { font: 300 37px/calc(var(--L) * 2) var(--face); position: relative; top: calc(var(--sit) + var(--L) / 2 - var(--lift)); }
+.doc h3 { font: 300 26px/var(--L) var(--face); position: relative; top: calc(var(--sit) - var(--lift)); }
+.doc [id] { scroll-margin-top: var(--L); }  /* A link to a heading lands it a rule below the top of the window. */
+
+/* Lists: a dash in the lightest ink; hand-lettered numbers, positioned out of flow so they cannot stretch a line. */
+.doc ul, .doc ol { padding-left: 1.4em; }
+.doc ul { list-style-type: '\2013  '; }
+.doc li::marker { color: var(--ink-3); }
+.doc ol { list-style: none; }
+.doc ol > li::before { content: counter(list-item) '.'; position: absolute; width: 1.6em; margin-left: -1.8em; text-align: right; font: 300 22px/var(--L) var(--face); color: var(--ink-2); }
+
+/* A quote: indented, in ink-2, with a pencil line down its side. */
+.doc blockquote { padding-left: 1.6em; color: var(--ink-2); position: relative; }
+.doc blockquote::before { content: ''; position: absolute; left: .45em; top: 2px; bottom: 6px; width: 4px; background: var(--mark-side) 0 0 / 100% 100% no-repeat; }
+
+/* Code: one line per rule and no box. A block wraps instead of scrolling. */
+.doc code { font: 15px/1 ui-monospace, 'SF Mono', Menlo, Consolas, monospace; color: var(--ink-2); }
+.doc pre { font: 15px/var(--L) ui-monospace, 'SF Mono', Menlo, Consolas, monospace; color: var(--ink-2); padding-left: 1.4em; white-space: pre-wrap; overflow-wrap: anywhere; tab-size: 2; position: relative; top: 1px; }
+.doc pre code { font: inherit; }
+
+/* A section break: a short squiggle on the rule. */
+.doc hr { border: 0; height: var(--L); background: var(--mark-squiggle) 0 calc(100% - var(--lift) - 2px) / 90px 10px no-repeat; }
+
+/* A table: the rules are its rows, and the rule under the header is traced in pencil. */
+.doc table { border-collapse: collapse; background: var(--mark-ground) 0 calc(var(--L) - var(--lift) - 5px) / 100% 8px no-repeat; }
+.doc th, .doc td { padding: 0 1.6em 0 0; height: var(--L); text-align: left; vertical-align: baseline; }
+.doc :is(th, td):last-child { padding-right: 0; }  /* Spacing goes between columns, not after the last one. */
+.doc th { font: 300 22px/var(--L) var(--face); color: var(--ink-2); white-space: nowrap; position: relative; top: calc(var(--sit) - var(--lift)); }
+.doc td code { white-space: nowrap; }  /* A token or value never breaks at a hyphen. */
+.doc :is(th, td).n { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+/* A picture: a whole number of rules tall (--rules), with its top and bottom on rules
+   and no frame. It is scaled to fit, never cropped. A scan or line drawing on white
+   (.drawing) blends into the paper; the caption is a note on the next rule. */
+.doc figure { display: flex; flex-wrap: wrap; column-gap: 1.4em; }
+.doc figure > :is(img, svg) { display: block; height: calc(var(--L) * var(--rules, 6)); width: auto; max-width: 100%; object-fit: contain; object-position: left center; position: relative; top: calc(-1 * var(--lift)); }
+.doc .drawing { mix-blend-mode: multiply; }
+.doc figcaption { flex-basis: 100%; font: 300 22px/var(--L) var(--face); color: var(--ink-2); position: relative; top: calc(var(--sit) - var(--lift)); }
+
+/* Small print: the date line, the contents line and the navigation, styled like the footer (15px, ink-2, never ink-3). */
+.meta, .doc .meta { list-style: none; padding: 0; margin-left: -1.4em; display: flex; flex-wrap: wrap; font-size: 15px; color: var(--ink-2);
+  clip-path: inset(-8px -5px -8px calc(1.4em - 5px)); }  /* Each item begins with a dot; the clip hides the dot that begins a line, and leaves room for a focus ring. */
+.meta li::before { content: '\b7'; content: '\b7' / ''; display: inline-block; width: 1.4em; text-align: center; }  /* Screen readers pass over the dot, as they do the footer's. */
+header nav { font-size: 15px; color: var(--ink-2); min-height: var(--L); position: relative; top: var(--sit); }
+header nav ul { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; column-gap: 1.4em; }
+header nav a { text-decoration-line: none; }
+header nav a:hover { text-decoration-line: underline; }
+nav [aria-current] { position: relative; color: var(--ink); }
+nav [aria-current]::after { content: ''; position: absolute; inset: -8px -16px -9px -14px; pointer-events: none; background: var(--mark-ring) 0 0 / 100% 100% no-repeat; }  /* The ring marks the current page. */
+
+/* Controls: a label on its own rule, the field on the next, and the rule under the field traced in ink-2. */
+.doc label { display: block; font-size: 15px; color: var(--ink-2); }
+.row > * + * { margin-top: 0 !important; }  /* A label, its field and its message stay together. */
+.field { font: inherit; color: var(--ink); border: 0; border-radius: 0; margin: 0; padding: 0 2px; display: block; width: 100%; max-width: 20em;
+  height: var(--L); line-height: var(--L); -webkit-appearance: none; appearance: none; outline: none;
+  background: var(--mark-line) 0 calc(100% - var(--lift) + 3px) / 100% 8px no-repeat; }
+select.field { width: auto; min-width: 12em; padding-right: 28px; cursor: pointer; background: var(--mark-caret) right 6px top 9px / 14px 10px no-repeat, var(--mark-line) 0 calc(100% - var(--lift) + 3px) / 100% 8px no-repeat; }
+.field[aria-invalid=true] { background: var(--mark-wave) 0 calc(100% - var(--lift) + 3px) / 60px 8px repeat-x; }  /* An error turns the line into a red wave. */
+.field:disabled { color: var(--ink-3); }
+.doc .check { color: var(--ink); font-size: inherit; cursor: pointer; }
+/* The box is sized to its words: 22px beside 18px print, and smaller in small print. */
+.check input { -webkit-appearance: none; appearance: none; font-size: inherit; width: 1.22em; height: 1.22em; margin: 0 .45em 0 0; vertical-align: -.22em; cursor: pointer;
+  background: var(--mark-checkbox) 0 0 / 100% 100% no-repeat; }
+.check input:checked { background: var(--mark-tick) 0 0 / 100% 100% no-repeat, var(--mark-checkbox) 0 0 / 100% 100% no-repeat; }
+:is(.field, .btn, .check input):focus-visible { outline: 1.5px dashed var(--ink-2); outline-offset: 3px; border-radius: 3px; }
+
+/* Buttons: one primary button per view, boxed in pencil; every other button is quiet, with its label underlined. */
+.btn { font: inherit; color: var(--ink); background: none; border: 0; margin: 0; padding: 0 .75em; line-height: var(--L); cursor: pointer; position: relative; }
+.btn::before { content: ''; position: absolute; inset: 1px -3px -2px; pointer-events: none; filter: url(#graphite); transform: rotate(-.8deg); background: var(--mark-box) 0 0 / 100% 100% no-repeat; }
+.btn:hover::before { background-image: var(--mark-box-again); }  /* Traced a second time on hover. */
+.btn:active { top: 1px; }
+.btn.quiet { padding: 0; color: var(--ink-2); text-decoration: underline 1px; text-underline-offset: 3px; }
+.btn.quiet::before { content: none; }
+.btn.quiet:hover { color: var(--ink); }
+.btn:disabled { color: var(--ink-3); cursor: default; top: 0; }
+.btn:disabled::before { opacity: .5; background-image: var(--mark-box); }
+.actions { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 1.6em; }
+
+/* A note: a few hand-lettered words, like a margin note. */
+.note { --hand: 50; font: 300 22px/var(--L) var(--face); color: var(--ink-2); position: relative; top: calc(var(--sit) - var(--lift, 0px)); }
+
+/* Tool feedback: an error in red, a result marked by the arrow, a loading state and an empty state. */
+.error { font-size: 15px; color: var(--red); }
+.result { font: 300 26px/var(--L) var(--face); color: var(--ink); position: relative; top: calc(var(--sit) - var(--lift)); }
+.result::before { content: ''; display: inline-block; width: 40px; height: 16px; margin-right: 12px; background: var(--mark-arrow) center / contain no-repeat; filter: url(#graphite); }
+.loading { color: var(--ink-2); }
+.loading::before { content: ''; display: inline-block; width: 60px; height: 10px; margin-right: 10px; vertical-align: 1px; background: var(--mark-drawing) 0 0 / 60px 10px no-repeat; }
+.empty { font: 300 22px/var(--L) var(--face); color: var(--ink-2); min-height: calc(var(--L) * 3); position: relative; top: calc(var(--sit) - var(--lift)); }
+@media (prefers-reduced-motion: reduce) { .loading::before { background-image: var(--mark-squiggle); } }
+
+/* A standalone mark inside running text: <span class="mark tick" aria-hidden="true"></span> */
+.mark { display: inline-block; width: 1.1em; height: 1em; vertical-align: -.15em; background: var(--m) center / contain no-repeat; }
+.mark.arrow { --m: var(--mark-arrow); width: 1.6em; } .mark.ring { --m: var(--mark-ring); width: 2em; }
+.mark.squiggle { --m: var(--mark-squiggle); width: 2.2em; } .mark.tick { --m: var(--mark-tick); }
+.mark.cross { --m: var(--mark-cross); } .mark.caret { --m: var(--mark-caret); width: .8em; }
+
+/* A portrait: one character beside the title, one rule taller than it, standing on the title's rule. */
+.titleline { display: flex; align-items: flex-end; gap: 28px; }
+.portrait { --size: calc(var(--L) * 4); width: var(--size); height: var(--size); flex: none; position: relative; margin-top: calc(var(--L) * -1); }
+.portrait svg { display: block; width: 100%; height: 100%; overflow: visible; }
+.portrait::after { content: ''; position: absolute; left: -12%; width: 124%; top: calc(var(--size) - 5px); height: 8px; background: var(--mark-ground) 0 0 / 100% 100% no-repeat; filter: url(#graphite); pointer-events: none; }
+/* A portrait that is alive (src/live.js) is a button, as each friend on the gallery is: it perks up while hovered or
+   focused, and a click, a tap, Enter or Space says hi. A double-click or a long press selects nothing, and a quick
+   second tap does not zoom the page. The focus ring goes round its box (STYLE.md §6); ::after is its ground line. */
+.portrait[role="button"] { cursor: pointer; border-radius: 3px; -webkit-tap-highlight-color: transparent; touch-action: manipulation;
+  -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+.portrait[role="button"]:focus { outline: none; }
+.portrait[role="button"]:focus-visible::before { content: ''; position: absolute; inset: -5.5px -4px; pointer-events: none;
+  border: 1.5px dashed var(--ink-2); border-radius: 3px; }
+
+/* A live region that says what happened (a hi, say) is for screen readers only, so it is hidden from view. */
+.announcer { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; border: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+@media (max-width: 720px) {
+  .doc { margin-top: var(--L); }
+  /* On a phone, hand-lettered text steps down one size and a part title takes two rules. */
+  .doc h1 { font-size: 45px; line-height: calc(var(--L) * 2); top: calc(var(--sit) + var(--L) / 2 - var(--lift)); }
+  .doc h2 { font-size: 31px; }
+  .doc h3, .result { font-size: 22px; }
+  .doc :is(ul, ol, pre) { padding-left: 1.2em; }
+  .doc blockquote { padding-left: 1.3em; }
+  .doc blockquote::before { left: .3em; }
+  .doc :is(th, td) { padding-right: 1em; }
+  .doc th, .doc figcaption, .note, .empty, .doc ol > li::before { font-size: 18px; }
+  .titleline { gap: 16px; }
+  .portrait { --size: calc(var(--L) * 3); }
+}
+/* The smallest phones: the title needs the full width, so the portrait is hidden, and a
+   table header may wrap onto a second rule. */
+@media (max-width: 359px) { .portrait { display: none; } .doc th { white-space: normal; } }
+
+/* Print: plain paper. The rules, margin line, texture, navigation and portrait are removed; the ink remains. */
+@media print {
+  html, body { background: none; }
+  body::before, header nav, .portrait { display: none; }
+  main { padding: 0; max-width: none; }
+}
+

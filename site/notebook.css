@@ -1,0 +1,101 @@
+/* The paper: a page of lined notebook paper (design C). It is shared by index.html,
+   style.html and specimen.html and is meant to be copied into other projects together
+   with site/pencil.css, which styles everything drawn on it. Every vertical measure is
+   a whole number of rules (--L), and text sits on the rules. See STYLE.md §4. */
+:root {
+  --L: 32px;                /* Rule spacing. */
+  --paper: #fbf9f3;
+  --rule: #cfdbe8;          /* Pale blue rules. */
+  --margin: #e6aaa3;        /* The red margin line. */
+  --margin-x: 88px;
+  --ink: #3d3c39;           /* Graphite. */
+  --ink-2: #6d6a63;
+  --ink-3: #97938a;         /* For marks only, never for text. */
+  --red: #a64a3f;           /* For errors only: a darker margin red. */
+  --band: 4;                /* Blank header band, in rules; the title sits on the first rule. */
+  /* One typeface on one dial (STYLE.md §5). --informal sets how informal the work is:
+     0 for a paper's diagram, 50 for a site, 100 for a hobby project. */
+  --face: 'Shantell Sans', ui-rounded, system-ui, sans-serif;
+  --informal: 50;
+}
+* { box-sizing: border-box; }
+/* Running text (the print) uses the dial value as its informality (INFM). Hand-lettered
+   text (a title, a note, a name; marked with --hand: 50) never drops below INFM 50, and
+   in the top half of the dial it also bounces, reaching BNCE 50 at 100. More bounce
+   lifts a lower-case p or s to capital height, so "phy" would read "Phy".
+   The declaration is !important because the font shorthand resets it; for the same
+   reason every font shorthand states its weight (300).
+   --sit is the distance a line of text moves down so that its baseline sits on its
+   rule: half a rule, minus the rule's 1px, minus half the face's ascent less its descent
+   ((1.02 - 0.32) / 2 em). It is declared on every element so that a component with its
+   own --L computes its own value. */
+h1, .hand { --hand: 50; }
+*, ::before, ::after { --sit: calc(var(--L) / 2 - 1px - .35em);
+  font-variation-settings: 'INFM' max(var(--informal), var(--hand, 0)),
+    'BNCE' max(var(--informal) + var(--hand, 0) - 100, 0) !important; }
+strong, b { font-weight: 600; }  /* Bold is the only heavier weight. */
+em, i, cite, var, dfn, address { font-style: normal; }  /* The face has no italics, so a browser would only slant it (STYLE.md §5). */
+html { background: var(--paper); }
+body {
+  margin: 0; min-height: 100vh; color: var(--ink); font: 300 18px/var(--L) var(--face);
+  -webkit-font-smoothing: antialiased;
+  /* Ruled lines (1px at the bottom of every --L band) and the margin line. */
+  background:
+    linear-gradient(var(--margin), var(--margin)) var(--margin-x) 0 / 1px 100% no-repeat,
+    repeating-linear-gradient(transparent 0 calc(var(--L) - 1px), var(--rule) calc(var(--L) - 1px) var(--L)) 0 calc(var(--L) * var(--band)) / 100% 100% no-repeat,
+    var(--paper);
+  background-attachment: local;
+}
+/* Paper texture. */
+body::before {
+  content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 10;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.75' numOctaves='3' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 .36  0 0 0 0 .34  0 0 0 0 .3  .5 0 0 0 -.2'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  opacity: .4; mix-blend-mode: multiply;
+}
+main { padding: calc(var(--L) * 2) 40px var(--L) calc(var(--margin-x) + 28px); max-width: 1280px; }
+a { color: inherit; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+a:hover { color: var(--ink); }
+a:focus-visible { outline: 1.5px dashed var(--ink-2); outline-offset: 3px; border-radius: 3px; }
+::selection { background: var(--rule); }
+
+/* The hand-lettered title, textured by the #graphite filter that each page inlines. */
+h1 {
+  font: 300 64px/calc(var(--L) * 3) var(--face); margin: 0; height: calc(var(--L) * 3);
+  width: fit-content; position: relative; top: calc(var(--sit) + var(--L));
+  filter: url(#graphite); transform: rotate(-1deg); transform-origin: 0 100%;
+}
+h1 a { text-decoration: none; }
+/* min-height rather than height, so a wrapped intro grows by whole rules. The intro
+   skips one rule to leave room for the title's descenders. */
+.intro { margin: 0; min-height: var(--L); color: var(--ink-2); font-size: 22px; position: relative; top: var(--sit); text-wrap: balance; }
+header > .intro { margin-top: var(--L); }
+
+/* Footer items wrap as whole items. Each begins with a separator dot in a strip hidden
+   to the left of the text, so a wrapped line never begins or ends with a dot. The dot
+   has empty alternative text, so that screen readers pass over it; a browser without
+   that syntax keeps the first declaration. */
+footer { margin: calc(var(--L) * 2) -4px 0; padding: 0 4px; min-height: var(--L); font-size: 15px; color: var(--ink-2); position: relative; top: var(--sit); overflow: hidden; overflow-wrap: anywhere; }  /* The padding leaves room for a focus ring. */
+footer ul { list-style: none; margin: 0 0 0 -1.4em; padding: 0; display: flex; flex-wrap: wrap; }
+footer li { padding-left: 1.4em; text-indent: -1.4em; text-wrap: balance; }  /* A wrapped item indents its second line under its text. */
+footer li::before { content: '\b7'; content: '\b7' / ''; display: inline-block; width: 1.4em; text-indent: 0; text-align: center; }
+footer a:hover { color: var(--ink); }
+
+@media (max-width: 720px) {
+  :root { --L: 30px; --margin-x: 22px; --band: 3; }
+  main { padding: calc(var(--L) * 2) 12px var(--L) calc(var(--margin-x) + 12px); }
+  /* The title stays on one line; the smallest phones get a smaller size instead. */
+  h1 { font-size: min(54px, 13vw); white-space: nowrap; height: calc(var(--L) * 2); line-height: calc(var(--L) * 2); top: calc(var(--sit) + var(--L) / 2); }
+  .intro { min-height: calc(var(--L) * 2); font-size: 18px; line-height: var(--L); }
+  header > .intro { margin-top: 0; }  /* The smaller title's descenders clear the next line. */
+}
+/* Phones in landscape: a shorter header keeps the characters on the first screen. It is
+   the phone's header: the title and the intro step down one, and the title's two rules
+   give its descenders room, so the intro follows at once. */
+@media (max-height: 500px) and (orientation: landscape) {
+  :root { --band: 2; }
+  main { padding-top: var(--L); }
+  h1 { font-size: 54px; height: calc(var(--L) * 2); line-height: calc(var(--L) * 2); top: calc(var(--sit) + var(--L) / 2); }
+  .intro { font-size: 18px; }
+  header > .intro { margin-top: 0; }
+}
+

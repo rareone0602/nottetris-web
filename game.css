@@ -1,0 +1,90 @@
+:root { --informal: 100; }
+[hidden] { display: none !important; }
+main { max-width: 1000px; }
+.byline { color: var(--ink-2); font-size: 15px; }
+.game { max-width: 42em; scroll-margin-top: var(--L); }
+.toolbar { display: flex; align-items: center; flex-wrap: wrap; gap: 0 var(--L); min-height: calc(var(--L) * 2); }
+.toolbar .btn { min-width: 48px; min-height: max(48px, calc(var(--L) * 1.5)); }
+.toolbar .btn::before { inset: 6px -3px 5px; }
+.help-link { display: inline-flex; align-items: center; min-height: 48px; color: var(--ink-2); font-size: 15px; }
+.settings { display: flex; flex-wrap: wrap; align-items: end; column-gap: var(--L); padding: 0 0 var(--L); }
+.settings .row { margin: 0; padding: 0; }
+.settings select.field { min-width: 0; max-width: 100%; height: calc(var(--L) * 2); }
+.settings .check { min-height: calc(var(--L) * 2); display: flex; align-items: center; }
+.settings .small { flex-basis: 100%; }
+.small { font-size: 15px; color: var(--ink-2); line-height: var(--L); }
+.play-layout { display: grid; grid-template-columns: minmax(0, 336px) minmax(100px, 1fr); column-gap: var(--L); align-items: start; }
+.board-wrap { position: relative; width: 100%; aspect-ratio: 336 / 600; touch-action: pan-y; }
+.board-wrap:focus-visible { outline: 1.5px dashed var(--ink-2); outline-offset: 4px; }
+#board { display: block; width: 100%; height: 100%; }
+.board-message { position: absolute; inset: 18% 12% auto 4%; padding: var(--L) 0; background: var(--paper); text-align: center; overflow-wrap: anywhere; pointer-events: none; }
+.board-message .hand { font-size: 26px; line-height: var(--L); }
+.board-message p + p { font-size: 15px; color: var(--ink-2); }
+.scores { display: flex; flex-direction: column; }
+.scores > div { min-height: calc(var(--L) * 3); }
+.scores dt { color: var(--ink-2); font-size: 15px; line-height: var(--L); }
+.scores dd { font-size: 26px; line-height: var(--L); overflow-wrap: anywhere; }
+.next-piece canvas { display: block; width: 136px; max-width: 100%; height: auto; }
+.score-notes .pace-note { max-width: 12em; }
+#score-note { min-height: var(--L); }
+.touch-controls { max-width: 500px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0; margin-top: var(--L); }
+.touch-controls .btn { min-height: calc(var(--L) * 2); padding: 0 4px; touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+.touch-controls .btn.is-held { font-weight: 600; color: var(--ink); text-decoration-thickness: 2px; }
+.touch-controls .btn:disabled { text-decoration: none; }
+.control-note { align-self: center; justify-self: center; font-size: 15px; color: var(--ink-2); }
+.game-status { min-height: var(--L); }
+.instructions, .credits { margin-top: calc(var(--L) * 2) !important; }
+.instructions > p + p, .instructions table, .credits > p + ul, .credits > ul + p { margin-top: var(--L); }
+.instructions table { width: 100%; }
+.instructions td { overflow-wrap: normal; }
+.credits a { overflow-wrap: anywhere; }
+footer { max-width: 42em; }
+
+@media (max-width: 600px) {
+  main { padding: var(--L) max(12px, env(safe-area-inset-right)) max(var(--L), env(safe-area-inset-bottom)) max(calc(var(--margin-x) + 12px), env(safe-area-inset-left)); }
+  .doc { margin-top: var(--L); }
+  .toolbar { column-gap: calc(var(--L) / 2); }
+  .toolbar .btn, .help-link { font-size: 15px; }
+  .play-layout {
+    --board-width: clamp(168px, calc((100svh - var(--L) * 9) * 0.56), 336px);
+    grid-template-columns: minmax(0, 1fr) 68px;
+    column-gap: calc(var(--L) / 2);
+    max-width: calc(var(--board-width) + 68px + var(--L) / 2);
+  }
+  .score-notes { display: contents; }
+  .scores { grid-column: 1 / -1; grid-row: 1; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); column-gap: 8px; }
+  .scores > div { min-width: 0; min-height: calc(var(--L) * 2); }
+  .scores dd { font-size: 22px; }
+  .board-wrap { grid-column: 1; grid-row: 2; width: 100%; min-width: 0; margin: 0; }
+  .next-piece { grid-column: 2; grid-row: 2; min-width: 0; }
+  .next-piece canvas { width: 68px; }
+  .pace-note, #score-note { display: none; }
+  .touch-controls { margin-top: 0; width: 100%; }
+  .touch-controls .btn { min-height: calc(var(--L) * 2); }
+  .control-note { font-size: 15px; }
+  .board-message .hand { font-size: 18px; }
+  .instructions :is(th, td) { font-size: 15px; padding-right: 8px; }
+  .instructions th { white-space: normal; }
+}
+@media (min-width: 480px) and (max-height: 500px) and (orientation: landscape) {
+  main { padding-right: max(12px, env(safe-area-inset-right)); padding-left: max(calc(var(--margin-x) + 12px), env(safe-area-inset-left)); }
+  .game {
+    display: grid;
+    grid-template-columns: 168px minmax(0, 1fr);
+    grid-template-areas: 'toolbar toolbar' 'settings settings' 'board information' 'board controls' 'status status';
+    column-gap: var(--L);
+  }
+  .toolbar { grid-area: toolbar; }
+  .settings { grid-area: settings; }
+  .play-layout { display: contents; }
+  .board-wrap { grid-area: board; width: 168px; min-width: 0; }
+  .board-message .hand { font-size: 18px; }
+  .score-notes { grid-area: information; display: block; min-width: 0; }
+  .scores { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: calc(var(--L) / 2); max-width: 336px; }
+  .scores > div { min-height: calc(var(--L) * 2); }
+  .next-piece, .pace-note, #score-note { display: none; }
+  .touch-controls { grid-area: controls; align-self: start; width: 100%; margin-top: 0; }
+  .game-status { grid-area: status; }
+  .game > noscript { grid-column: 1 / -1; }
+}
+@media (prefers-reduced-motion: reduce) { *, ::before, ::after { scroll-behavior: auto !important; } }
